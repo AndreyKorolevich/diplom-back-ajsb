@@ -2,7 +2,9 @@ const http = require('http');
 const Koa = require('koa');
 const Router = require('koa-router');
 const WS = require('ws');
-const mongoose = require('mongoose')
+const mongoose = require('mongoose');
+const Message = require('./models/messages');
+const User = require('./models/user');
 
 
 const app = new Koa();
@@ -45,18 +47,26 @@ const wsServer = new WS.Server({ server });
 let delUser;
 
 wsServer.on('connection', (ws, req) => {
-
-  ws.on('message', async (msg) => {
-    const message = JSON.parse(msg);
-    if (message.type === 'addUser') {
-      const user = await User.getByName(message.user);
+  ws.on('message', async (res) => {
+    const response = JSON.parse(res)
+    console.log(response)
+    if (response.type === 'newUser') {
+      const user = await User.findOne({name: response.name.toLowerCase()})
       if (!user) {
-        const newUser = new User(message.user);
+        const newUser = new User({
+          name: response.name,
+          password: response.password
+        });
         await newUser.save();
-        const users = await User.getAll();
         [...wsServer.clients]
           .filter(elem => elem.readyState === WS.OPEN)
-          .forEach(elem => elem.send(JSON.stringify({ type: 'allUsers', data: users })));
+          .forEach(elem => elem.send(JSON.stringify({
+            type: 'newUser',
+            data: {
+              name: response.name,
+              id: newUser._id
+            }
+          })));
         return
       }
       ws.send(JSON.stringify({ type: 'error', text: 'There`s already such a user name' }));
@@ -95,7 +105,7 @@ const start = async () => {
   try{
     const url = 'mongodb+srv://Andrew:arF5vQFnnT12KkLT@cluster0.yrthm.mongodb.net/organizer';
     await mongoose.connect(url, {useNewUrlParser: true, useFindAndModify: false});
-    const port = process.env.PORT || 7070;
+    const port = process.env.PORT || 7000;
     server.listen(port);
   }catch (e) {
     console.log(e)

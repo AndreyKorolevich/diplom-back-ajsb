@@ -17,4 +17,4 @@ const message = new Schema({
     }
 })
 
-module.exports = model('Scooter', message);
+module.exports = model('Message', message);
