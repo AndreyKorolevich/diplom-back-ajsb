@@ -6,7 +6,7 @@ const message = new Schema({
         required: true
     },
     file: {
-        type: Number,
+        type: String,
     },
     text: {
         type: String,
