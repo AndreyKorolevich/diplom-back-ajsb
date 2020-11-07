@@ -2,6 +2,7 @@ const http = require('http');
 const Koa = require('koa');
 const Router = require('koa-router');
 const WS = require('ws');
+const moment = require('moment');
 const mongoose = require('mongoose');
 const Message = require('./models/messages');
 const User = require('./models/user');
@@ -54,9 +55,9 @@ wsServer.on('connection', (ws, req) => {
             case 'newUser':
                 const user = await User.findOne({name: response.name.toLowerCase()})
                 if (!user) {
-                    const allUsers = await User.find().select('name _id');
                     const newUser = new User({
                         name: response.name.toLowerCase(),
+                        online: true,
                         password: response.password
                     });
                     await newUser.save();
@@ -64,9 +65,11 @@ wsServer.on('connection', (ws, req) => {
                         type: 'newUser',
                         data: {
                             name: response.name,
+                            online: true,
                             _id: newUser._id
                         }
                     }));
+                    const allUsers = await User.find().select('name _id online');
                     [...wsServer.clients]
                         .filter(elem => elem.readyState === WS.OPEN)
                         .forEach(elem => elem.send(JSON.stringify({
@@ -80,7 +83,8 @@ wsServer.on('connection', (ws, req) => {
             case 'checkUser':
                 const findUser = await User.findOne({name: response.name.toLowerCase()})
                 if (findUser) {
-                    const allUsers = await User.find().select('name _id');
+                    await User.updateOne({ name: response.name.toLowerCase() }, { online: true });
+                    const allUsers = await User.find().select('name _id online');
                     ws.send(JSON.stringify({
                         type: 'checkUser',
                         data: {
@@ -103,6 +107,7 @@ wsServer.on('connection', (ws, req) => {
                 const newMessage = new Message({
                     type: 'text',
                     text: response.data,
+                    date: moment().format('LT'),
                     userId: currentUser
                 })
                 await newMessage.save();
@@ -110,6 +115,15 @@ wsServer.on('connection', (ws, req) => {
                     .filter(elem => elem.readyState === WS.OPEN)
                     .forEach(elem => elem.send(JSON.stringify({type: 'addMessage', data: newMessage})));
                 return
+            case 'disconectUser':
+                await User.updateOne({ _id: response.userId }, { online: false });
+                const allUsers = await User.find().select('name _id online');
+                [...wsServer.clients]
+                    .filter(elem => elem.readyState === WS.OPEN)
+                    .forEach(elem => elem.send(JSON.stringify({
+                        type: 'disconectUser',
+                        data: allUsers
+                    })));
             default:
                 break
         }

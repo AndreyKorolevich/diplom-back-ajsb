@@ -11,6 +11,10 @@ const message = new Schema({
     text: {
         type: String,
     },
+    date: {
+        type: String,
+        required: true
+    },
     userId: {
         type: Schema.Types.ObjectId,
         ref: 'User'

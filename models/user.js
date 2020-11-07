@@ -8,6 +8,10 @@ const user = new Schema({
         type: String,
         required: true
     },
+    online: {
+        type: Boolean,
+        required: true
+    },
     avatarURL: {
         type: String
     },
