@@ -83,7 +83,7 @@ wsServer.on('connection', (ws, req) => {
             case 'checkUser':
                 const findUser = await User.findOne({name: response.name.toLowerCase()})
                 if (findUser) {
-                    await User.updateOne({ name: response.name.toLowerCase() }, { online: true });
+                    await User.updateOne({name: response.name.toLowerCase()}, {online: true});
                     const allUsers = await User.find().select('name _id online');
                     ws.send(JSON.stringify({
                         type: 'checkUser',
@@ -92,12 +92,12 @@ wsServer.on('connection', (ws, req) => {
                             _id: findUser._id
                         }
                     }));
-                  [...wsServer.clients]
-                      .filter(elem => elem.readyState === WS.OPEN)
-                      .forEach(elem => elem.send(JSON.stringify({
-                        type: 'allUsers',
-                        data: allUsers
-                      })));
+                    [...wsServer.clients]
+                        .filter(elem => elem.readyState === WS.OPEN)
+                        .forEach(elem => elem.send(JSON.stringify({
+                            type: 'allUsers',
+                            data: allUsers
+                        })));
                     return
                 }
                 ws.send(JSON.stringify({type: 'errorCheck', text: 'Name or password wrong'}));
@@ -116,7 +116,7 @@ wsServer.on('connection', (ws, req) => {
                     .forEach(elem => elem.send(JSON.stringify({type: 'addMessage', data: newMessage})));
                 return
             case 'disconectUser':
-                await User.updateOne({ _id: response.userId }, { online: false });
+                await User.updateOne({_id: response.userId}, {online: false});
                 const allUsers = await User.find().select('name _id online');
                 [...wsServer.clients]
                     .filter(elem => elem.readyState === WS.OPEN)
