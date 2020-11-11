@@ -12,7 +12,7 @@ const message = new Schema({
         type: String,
     },
     date: {
-        type: String,
+        type: Number,
         required: true
     },
     userId: {

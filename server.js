@@ -2,7 +2,6 @@ const http = require('http');
 const Koa = require('koa');
 const Router = require('koa-router');
 const WS = require('ws');
-const moment = require('moment');
 const mongoose = require('mongoose');
 const Message = require('./models/messages');
 const User = require('./models/user');
@@ -69,6 +68,16 @@ wsServer.on('connection', (ws, req) => {
                             _id: newUser._id
                         }
                     }));
+                    const lastMessages = await Message
+                        .find()
+                        .sort({"date": -1})
+                        .limit(10)
+                        .populate('userId', 'name')
+                        .select('type text date _id');
+                    ws.send(JSON.stringify({
+                        type: 'lastMessages',
+                        data: lastMessages
+                    }));
                     const allUsers = await User.find().select('name _id online');
                     [...wsServer.clients]
                         .filter(elem => elem.readyState === WS.OPEN)
@@ -85,6 +94,12 @@ wsServer.on('connection', (ws, req) => {
                 if (findUser) {
                     await User.updateOne({name: response.name.toLowerCase()}, {online: true});
                     const allUsers = await User.find().select('name _id online');
+                    const lastMessages = await Message
+                        .find()
+                        .sort({"date": -1})
+                        .limit(10)
+                        .populate('userId', 'name')
+                        .select('type text date _id');
                     ws.send(JSON.stringify({
                         type: 'checkUser',
                         data: {
@@ -92,12 +107,17 @@ wsServer.on('connection', (ws, req) => {
                             _id: findUser._id
                         }
                     }));
+                    ws.send(JSON.stringify({
+                        type: 'lastMessages',
+                        data: lastMessages
+                    }));
                     [...wsServer.clients]
                         .filter(elem => elem.readyState === WS.OPEN)
                         .forEach(elem => elem.send(JSON.stringify({
-                            type: 'allUsers',
-                            data: allUsers
-                        })));
+                                type: 'allUsers',
+                                data: allUsers
+                            }))
+                        );
                     return
                 }
                 ws.send(JSON.stringify({type: 'errorCheck', text: 'Name or password wrong'}));
@@ -107,7 +127,7 @@ wsServer.on('connection', (ws, req) => {
                 const newMessage = new Message({
                     type: 'text',
                     text: response.data,
-                    date: moment().format('LT'),
+                    date: new Date(),
                     userId: currentUser
                 })
                 await newMessage.save();
