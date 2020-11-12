@@ -71,7 +71,7 @@ wsServer.on('connection', (ws, req) => {
                     const lastMessages = await Message
                         .find()
                         .sort({"date": -1})
-                        .limit(10)
+                        .limit(15)
                         .populate('userId', 'name')
                         .select('type text date _id');
                     ws.send(JSON.stringify({
@@ -97,7 +97,7 @@ wsServer.on('connection', (ws, req) => {
                     const lastMessages = await Message
                         .find()
                         .sort({"date": -1})
-                        .limit(10)
+                        .limit(15)
                         .populate('userId', 'name')
                         .select('type text date _id');
                     ws.send(JSON.stringify({
@@ -135,6 +135,17 @@ wsServer.on('connection', (ws, req) => {
                     .filter(elem => elem.readyState === WS.OPEN)
                     .forEach(elem => elem.send(JSON.stringify({type: 'addMessage', data: newMessage})));
                 return
+            case 'lastTenMessages':
+                const last = await Message
+                    .find({"date": {"$lt": response.lastMessage}})
+                    .sort({"date": -1})
+                    .limit(10)
+                    .populate('userId', 'name')
+                    .select('type text date _id');
+                [...wsServer.clients]
+                    .filter(elem => elem.readyState === WS.OPEN)
+                    .forEach(elem => elem.send(JSON.stringify({type: 'lastTenMessages', data: last})));
+                return
             case 'disconectUser':
                 await User.updateOne({_id: response.userId}, {online: false});
                 const allUsers = await User.find().select('name _id online');
@@ -167,7 +178,7 @@ const start = async () => {
     try {
         const url = 'mongodb+srv://Andrew:arF5vQFnnT12KkLT@cluster0.yrthm.mongodb.net/organizer';
         await mongoose.connect(url, {useNewUrlParser: true, useFindAndModify: false});
-        const port = process.env.PORT || 7000;
+        const port = process.env.PORT || 7010;
         server.listen(port);
     } catch (e) {
         console.log(e)
