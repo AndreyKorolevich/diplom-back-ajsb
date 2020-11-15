@@ -49,7 +49,7 @@ let delUser;
 wsServer.on('connection', (ws, req) => {
     ws.on('message', async (res) => {
         const response = JSON.parse(res)
-        console.log(response)
+        console.log(response.type)
         switch (response.type) {
             case 'newUser':
                 const user = await User.findOne({name: response.name.toLowerCase()})
@@ -73,7 +73,7 @@ wsServer.on('connection', (ws, req) => {
                         .sort({"date": -1})
                         .limit(15)
                         .populate('userId', 'name')
-                        .select('type text date _id');
+                        .select('type text file date _id');
                     ws.send(JSON.stringify({
                         type: 'lastMessages',
                         data: lastMessages
@@ -99,7 +99,7 @@ wsServer.on('connection', (ws, req) => {
                         .sort({"date": -1})
                         .limit(15)
                         .populate('userId', 'name')
-                        .select('type text date _id');
+                        .select('type text file date _id');
                     ws.send(JSON.stringify({
                         type: 'checkUser',
                         data: {
@@ -123,10 +123,11 @@ wsServer.on('connection', (ws, req) => {
                 ws.send(JSON.stringify({type: 'errorCheck', text: 'Name or password wrong'}));
                 return
             case 'addMessage':
-                const currentUser = await User.findById(response.userId).select('name _id')
+                const currentUser = await User.findById(response.userId).select('name _id');
                 const newMessage = new Message({
-                    type: 'text',
-                    text: response.data,
+                    type: `${response.typeData}`,
+                    text: response.text,
+                    file: response.file,
                     date: new Date(),
                     userId: currentUser
                 })
@@ -141,7 +142,7 @@ wsServer.on('connection', (ws, req) => {
                     .sort({"date": -1})
                     .limit(10)
                     .populate('userId', 'name')
-                    .select('type text date _id');
+                    .select('type text file date _id');
                 [...wsServer.clients]
                     .filter(elem => elem.readyState === WS.OPEN)
                     .forEach(elem => elem.send(JSON.stringify({type: 'lastTenMessages', data: last})));
